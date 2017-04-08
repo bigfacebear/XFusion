@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<image_width>320</image_width>
+<image_height>240</image_height>
+<camera_matrix type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>3</cols>
+  <dt>d</dt>
+  <data>
+    3.4568543797817188e+02 0. 1.5950000000000000e+02 0.
+    3.4685500099761481e+02 1.1950000000000000e+02 0. 0. 1.</data></camera_matrix>
+<distortion_coefficients type_id="opencv-matrix">
+  <rows>1</rows>
+  <cols>5</cols>
+  <dt>d</dt>
+  <data>
+    1.2446411817360527e-01 -4.9748418106597414e-01 0. 0.
+    1.1336695283794749e+00</data></distortion_coefficients>
+</opencv_storage>
