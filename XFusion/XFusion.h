@@ -29,7 +29,7 @@ public:
 	
 	static cv::Mat depthEstimate(const Frame &Ii, const Frame &Ik);
 
-	static void fuseToGrid(Grid &grid, PoseMatx &T, cv::Mat dmap);
+	static void fuseToGrid(Grid &grid, PoseMatx &T, cv::Mat I, cv::Mat dmap, cv::Mat intrinsic_matrix);
 
 	static void raycastingFromTv(PoseMatx &Tv, Grid &grid, cv::Size size, cv::Mat intrinsic_matrix, cv::Mat &IM, cv::Mat &DM);
 

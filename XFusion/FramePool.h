@@ -24,7 +24,7 @@ public:
 
 	Frame& getLatestFrame();  // Get the latest frame for pose estimation
 
-	Frame& getKeyFrame(Frame &Ii);  // Find a key frame for an incoming new frame
+	Frame& getKeyFrame(Frame &Ii, cv::Mat intrinsic_matrix);  // Find a key frame for an incoming new frame
 
 	void addFrame(cv::Mat img) {
 		pool.push_back(Frame(img));

@@ -30,7 +30,7 @@ void XFuser::fuse() {
 		Frame newFrame(Iv, T);
 
 		// Select a keyframe from the frame pool
-		Frame &keyFrame = framePool.getKeyFrame(newFrame);
+		Frame &keyFrame = framePool.getKeyFrame(newFrame, intrinsic_matrix);
 		// Update the frame pool
 		framePool.addFrame(newFrame);
 
@@ -38,7 +38,7 @@ void XFuser::fuse() {
 		// cv::Mat dmap = depthEstimator.depthEstimate(newFrame, keyframe);
 		cv::Mat dmap = depthEstimate(newFrame, keyFrame);
 
-		fuseToGrid(grid, T, dmap);
+		fuseToGrid(grid, T, Iv, dmap, intrinsic_matrix);
 
 		// TODO: live feedback during processing
 	}
@@ -71,8 +71,39 @@ cv::Mat XFuser::depthEstimate(const Frame & Ii, const Frame & Ik)
 	return cv::Mat();
 }
 
-void XFuser::fuseToGrid(Grid & grid, PoseMatx & T, cv::Mat dmap)
-{
+void XFuser::fuseToGrid(Grid & grid, PoseMatx & T, cv::Mat I, cv::Mat dmap, cv::Mat intrinsic_matrix) {
+	int K = grid.getK();
+	for (int x = 0; x < K; x++) {
+		for (int y = 0; y < K; y++) {
+			for (int z = 0; z < K; z++) {
+				cv::Vec4d p(x - K / 2, y - K / 2, z, 1);  // voxel's world coordinate
+				cv::Vec4d q = T * p;  // voxel's camera coordinate
+				cv::Vec3d u_homo = cv::Mat(intrinsic_matrix * cv::Mat(cv::Mat(q), cv::Rect(0, 0, 1, 3)));
+				int u = (int)(u_homo[0] / u_homo[2]);  // voxel's image coordinate.u
+				int v = (int)(u_homo[1] / u_homo[2]);  // voxel's image coordinate.v
+				if (u < 0 || v < 0 || u >= I.cols || v >= I.rows) {
+					continue;  // this voxel is not on the image
+				}
+				double s = dmap.at<double>(v, u) - q[3] / q[4]; // s = D(u,v) - q.z
+				if (s < -8) {
+					continue;  // only update visible voxels
+				}
+				if (s > 8) {
+					s = 8;  // truncate s to 8
+				}
+				cv::Mat c = cv::Mat(I.at<cv::Vec3b>(v, u));
+				c.convertTo(c, CV_64FC3);
+				Voxel &voxel = grid.voxels[x][y][z];
+				voxel.S = (voxel.S * voxel.W + s) / (voxel.W + 1);
+				cv::Mat tmp(voxel.C);
+				tmp.convertTo(tmp, CV_64FC3);
+				tmp = (tmp * voxel.W + c) / (voxel.W + 1);
+				tmp.convertTo(tmp, CV_8UC3);
+				voxel.C = tmp;
+				voxel.W = voxel.W == 50 ? 50 : voxel.W + 1;
+			}
+		}
+	}
 }
 
 void XFuser::raycastingFromTv(PoseMatx & Tv, Grid & grid, cv::Size size, cv::Mat intrinsic_matrix, cv::Mat & IM, cv::Mat & DM) {
@@ -80,19 +111,10 @@ void XFuser::raycastingFromTv(PoseMatx & Tv, Grid & grid, cv::Size size, cv::Mat
 	DM = cv::Mat(size, CV_64FC1, cv::Scalar::all(-1));
 
 	cv::Mat intrinsic_matrix_inv = intrinsic_matrix.inv();
-	cv::Mat Tv_inv = cv::Mat(Tv.inv());
 
-	cv::Mat M = intrinsic_matrix * cv::Mat(cv::Mat(Tv), cv::Rect(0, 0, 4, 3));
-	cv::Mat A = cv::Mat(M, cv::Rect(0, 0, 3, 3));
-	cv::Mat b = cv::Mat(M, cv::Rect(3, 0, 1, 3));
-	cv::Mat T_Camera = -A.inv() * b;
-	//cv::Mat T_Camera(cv::Mat(Tv), cv::Rect(3, 0, 1, 3));
 	cv::Mat R_Camera(cv::Mat(Tv), cv::Rect(0, 0, 3, 3));
 	cv::Mat R_Camera_inv = R_Camera.inv();
-
-	std::cout << Tv << std::endl;
-	std::cout << R_Camera << std::endl;
-	std::cout << T_Camera << std::endl;
+	cv::Mat T_Camera = -R_Camera_inv * cv::Mat(cv::Mat(Tv), cv::Rect(3, 0, 1, 3));
 
 	for (int u = 0; u < size.width; u++) {
 		for (int v = 0; v < size.height; v++) {
@@ -100,9 +122,6 @@ void XFuser::raycastingFromTv(PoseMatx & Tv, Grid & grid, cv::Size size, cv::Mat
 
 			p = intrinsic_matrix_inv * p;
 			cv::Mat rayDir = R_Camera_inv * p;
-
-			/*std::cout << p << std::endl;
-			std::cout << rayDir << "\n" << std::endl;*/
 
 			// raycast
 			cv::Vec3b color;

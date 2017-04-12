@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 	PoseMatx Tv(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
-		0, 0, 1, 1000,
+		0, 0, 1, 500,
 		0, 0, 0, 1);
 
 	Grid grid(256);
