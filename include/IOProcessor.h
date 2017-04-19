@@ -6,13 +6,13 @@
 class IOProcessor {
 public:
 
-	IOProcessor() = default;
+    IOProcessor() = default;
 
-	IOProcessor(const std::string &vname);
+    IOProcessor(const std::string &vname);
 
-	void loadVideo(const std::string &vname);
+    void loadVideo(const std::string &vname);
 
-	cv::Mat get();
+    cv::Mat get();
 private:
 
 };

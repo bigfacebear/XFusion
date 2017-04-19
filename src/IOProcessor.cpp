@@ -10,5 +10,5 @@ void IOProcessor::loadVideo(const std::string & vname)
 
 cv::Mat IOProcessor::get()
 {
-	return cv::Mat();
+    return cv::Mat();
 }
