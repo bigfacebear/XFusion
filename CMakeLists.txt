@@ -4,19 +4,19 @@ project(XFusion)
 set(CMAKE_CXX_STANDARD 11)
 
 # OpenCV
-if(APPLE)
-    find_package(OpenCV HINTS /usr/local/opt/opencv3 REQUIRED)
-else()
-    find_package(OpenCV REQUIRED)
-endif()
-include_directories(${OpenCV_INCLUDE_DIRS})
+find_package(OpenCV REQUIRED)
+message("   Found OpenCV - include: ${OpenCV_INCLUDE_DIRS}, lib: ${OpenCV_LIBRARIES}")
 
 # Ceres-Solver
 find_package(Ceres REQUIRED)
-include_directories(${CERES_INCLUDE_DIRS})
+message("   Found Ceres - include: ${CERES_INCLUDE_DIRS}, lib: ${CERES_LIBRARIES}")
 
 # Project headers
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
+        ${OpenCV_INCLUDE_DIRS}
+        ${CERES_INCLUDE_DIRS}
+)
 
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(SOURCE_FILES

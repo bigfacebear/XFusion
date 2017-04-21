@@ -3,6 +3,7 @@
 
 # User-specific stuff:
 .idea/
+.DS_Store
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/
