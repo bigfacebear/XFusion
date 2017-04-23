@@ -1,9 +1,12 @@
 #pragma once
 
+#ifndef XFUSION_FRAMEPOOL_H
+#define XFUSION_FRAMEPOOL_H
+
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-typedef cv::Mat PoseMatx;
+#include "definition.h"
 
 class Frame {
 public:
@@ -36,3 +39,5 @@ public:
 private:
     std::vector<Frame> pool;
 };
+
+#endif

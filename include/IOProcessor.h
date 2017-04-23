@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef XFUSION_IOPROCESSOR_H
+#define XFUSION_IOPROCESSOR_H
+
 #include <opencv2/opencv.hpp>
 #include <string>
 
@@ -16,3 +19,5 @@ public:
 private:
 
 };
+
+#endif
