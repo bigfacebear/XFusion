@@ -21,7 +21,7 @@ const GLuint FRAME_WIDTH = 320;
 const GLuint FRAME_HEIGHT = 240;
 const cv::Size IMG_SIZE(FRAME_WIDTH, FRAME_HEIGHT);
 
-void gpuRun(Shader &shader);
+void gpuRun();
 
 void getShaderBufferObjectDataToImage(GLuint buffer, size_t pixelSize, cv::Mat& img);
 

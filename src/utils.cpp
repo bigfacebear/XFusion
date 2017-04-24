@@ -4,13 +4,14 @@
 
 #include "definition.h"
 
+extern GLFWwindow *glWindow;
 extern GLuint DRAW_VAO;
 
-void gpuRun(Shader &shader) {
-    shader.use();
+void gpuRun() {
     glBindVertexArray(DRAW_VAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
+    glfwSwapBuffers(glWindow);
 }
 
 

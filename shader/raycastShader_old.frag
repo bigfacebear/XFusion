@@ -19,7 +19,6 @@ layout (std430, binding = 3) buffer DMBuf {
 uniform mat3 intrinsic_matrix_inv;
 uniform vec3 T_Camera;
 uniform mat3 R_Camera_inv;
-uniform mat3 R_Camera;
 uniform int K;
 
 out vec3 color;
@@ -33,7 +32,7 @@ void main() {
     ivec2 coord = ivec2(gl_FragCoord.x, 240 - gl_FragCoord.y - 1);
     const int index = 320 * coord.y + coord.x;
     vec3 v = R_Camera_inv * intrinsic_matrix_inv * vec3(coord.xy, 1);
-    vec3 p = -R_Camera_inv * T_Camera;
+    vec3 p = vec3(T_Camera.xyz);
 
     p.x += K / 2;
     p.y += K / 2;
@@ -57,18 +56,49 @@ void main() {
     vec3 old_real_p = vec3(0.0, 0.0, 0.0), new_real_p;
     bool flag = false;
     for (int i = beg; i >= 0 && i < K; i += step) {
-        float t = (float(i + 0.5) - p[dir]) / v[dir];
+        float t;
+        vec3 p0, p1, p2;
+        int voxelIndex[3] = {-1, -1, -1};
+        voxelIndex[0] = voxelIndex[1] = voxelIndex[2] = -1;
+        t = (float(i) - p[dir]) / v[dir];
         if (t < 0) {
             continue;
         }
-        new_real_p = vec3(float(i + 0.5), p[dir1] + t * v[dir1], p[dir2] + t * v[dir2]);
-        int voxelIndex = getVoxelIndex(new_real_p);
-        if (voxelIndex == -1) {
-            color = vec3(0.4, 0.5, 0.6);
+        p0[dir] = float(i);
+        p0[dir1] = p[dir1] + t * v[dir1];
+        p0[dir2] = p[dir2] + t * v[dir2];
+        voxelIndex[0] = getVoxelIndex(p0);
+        t = (i + 1 - p[dir]) / v[dir];
+        if (t < 0) {
             continue;
         }
-        new_C = unpackPixel(C[voxelIndex]);
-        new_S = S[voxelIndex];
+        p2[dir] = float(i);
+        p2[dir1] = p[dir1] + t * v[dir1];
+        p2[dir2] = p[dir2] + t * v[dir2];
+        voxelIndex[2] = getVoxelIndex(p2);
+        if ((min(p0[dir1], p2[dir1]) - int(max(p0[dir1], p2[dir1])) < 0) && 
+            (min(p0[dir2], p2[dir2]) - int(max(p0[dir2], p2[dir2])) < 0)) {
+            p1[dir] = float(i);
+            p1[dir1] = (v[dir1] > 0) ? min(p0[dir1], p2[dir1]) : max(p0[dir1], p2[dir1]);
+            p1[dir2] = (v[dir2] > 0) ? min(p0[dir2], p2[dir2]) : max(p0[dir2], p2[dir2]);
+            voxelIndex[1] = getVoxelIndex(p1);
+        }
+        float cnt = 0;
+        new_S = 0;
+        new_C = uvec3(0, 0, 0);
+        for (int j = 0; j < 3; j++) {
+            if (voxelIndex[j] != -1) {
+                new_C = uvec3(cnt / (cnt + 1) * vec3(new_C) + 1.0 / (cnt + 1) * vec3(unpackPixel(C[voxelIndex[j]])));
+                new_S = cnt / (cnt + 1) * new_S + 1.0 / (cnt + 1) * S[voxelIndex[j]];
+                cnt += 1;
+            }
+        }
+        if (cnt == 0) {
+            continue;
+        }
+        new_real_p[dir] = i + 0.5;
+        new_real_p[dir1] = (p0[dir1] + p2[dir1]) / 2;
+        new_real_p[dir2] = (p0[dir2] + p2[dir2]) / 2;
         if (new_S <= 0) {
             if (new_S == 0 || !flag) {
                 IM[index] = packPixel(new_C);
@@ -81,10 +111,10 @@ void main() {
                 IM[index] = packPixel(uvec3(para_new * new_C + para_old * old_C));
                 new_real_p = para_new * new_real_p + para_old * old_real_p;
             }
-            vec3 new_real_p = new_real_p - vec3(K / 2, K / 2, 0);
-            vec3 camera_p = R_Camera * new_real_p  + T_Camera;
-            DM[index] = camera_p.z;
-            color = vec3(0,1,1);
+            DM[index] = (new_real_p - vec3(K / 2, K / 2, 0)).z;
+
+            color = vec3(1, 1, 1);
+
             return;
         }
         else {
@@ -94,8 +124,6 @@ void main() {
             flag = true;
         }
     }
-    IM[index] = packPixel(uvec3(0,0,0));
-    DM[index] = 2000;
     color = vec3(0.2, 0.3, 0.3);
 }
 

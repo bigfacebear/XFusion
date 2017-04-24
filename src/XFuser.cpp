@@ -115,42 +115,6 @@ void XFuser::fuseToGrid(Grid & grid, PoseMatx & T, cv::Mat I, cv::Mat dmap, cv::
 //    }
 }
 
-//void XFuser::raycastingFromTv(PoseMatx & Tv, Grid & grid, cv::Size size, cv::Mat intrinsic_matrix, cv::Mat & IM, cv::Mat & DM) {
-//    IM = cv::Mat(size, CV_8UC3);
-//    DM = cv::Mat(size, CV_64FC1, cv::Scalar::all(-1));
-//
-//    cv::Mat intrinsic_matrix_inv = intrinsic_matrix.inv();
-//
-//    cv::Mat R_Camera(Tv, cv::Rect(0, 0, 3, 3));
-//    cv::Mat R_Camera_inv = R_Camera.inv();
-//    cv::Mat T_Camera = -R_Camera_inv * cv::Mat(Tv, cv::Rect(3, 0, 1, 3));
-//
-//    std::cout << T_Camera << std::endl;
-//
-//    for (int u = 0; u < size.width; u++) {
-//        for (int v = 0; v < size.height; v++) {
-//            cv::Mat p(cv::Vec3d(u, v, 1));
-//
-//            p = intrinsic_matrix_inv * p;
-//            cv::Mat rayDir = R_Camera_inv * p;
-//
-//            // raycast
-//            cv::Vec3b color;
-//            cv::Mat worldP;
-//            bool if_hit = grid.getColorAndPointByRay(T_Camera, rayDir, color, worldP);
-//            if (if_hit) {
-//                cv::Vec3d cameraP = cv::Mat(R_Camera * worldP - T_Camera);
-//                IM.at<cv::Vec3b>(v, u) = color;
-//                DM.at<double>(v, u) = cameraP[2];
-//            }
-//            else {
-//                IM.at<cv::Vec3b>(v, u) = cv::Vec3b::all(0);
-//                DM.at<double>(v, u) = INFINITY;
-//            }
-//        }
-//    }
-//}
-
 bool XFuser::initOpenGLContext() {
     if (glfwInit() != GL_TRUE) {
         std::cout << "Failed to initialize GLFW." << std::endl;

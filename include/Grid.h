@@ -18,34 +18,30 @@
 //    double S;
 //    int W;
 //};
-
-//class Old_Grid {
+//
+//class Grid {
 //public:
 //    // The container of voxels
 //    Voxel*** voxels;  // TODO: make a container for it
 //
-//    Old_Grid(int K);
-//    ~Old_Grid();
+//    Grid(int K);
+//    ~Grid();
 //
 //    int getK() { return K; }
 //
-//    inline Voxel* getVoxelByCoordinate(double x, double y, double z);
-//    inline Voxel* getVoxelByCoordinate(cv::Vec3d v);
-//    bool getColorAndPointByRay(cv::Vec3d p, cv::Vec3d v, cv::Vec3b &C, cv::Mat &worldP);
+//    inline Voxel* getVoxelByCoordinate(float x, float y, float z);
+//    inline Voxel* getVoxelByCoordinate(cv::Vec3f v);
+//    bool getColorAndPointByRay(cv::Vec3f p, cv::Vec3f v, cv::Vec3b &C, cv::Mat &worldP);
 //
 //private:
 //    int K;
 //
-//    double min(double a, double b) { return (a > b) ? b : a; }
-//    double max(double a, double b) { return (a > b) ? a : b; }
+//    float min(float a, float b) { return (a > b) ? b : a; }
+//    float max(float a, float b) { return (a > b) ? a : b; }
 //};
 
 class Grid {
 public:
-    // voxel information
-    GLbyte ****C; // RGBA, 4 channels for the convenience of passing data to OpenGL Shader
-    GLfloat ***S;  // The distance to the surface from the voxel
-    int ***W;  // voxel's weight when in fusing stage
 
     Grid(int K);
     ~Grid();
@@ -61,8 +57,28 @@ public:
             cv::Mat &DM  // depth map, data in GLfloat
     );
 
+    GLbyte* getC(int x, int y, int z) {
+        return &C[4 * getIndex(x, y, z)];
+    }
+
+    GLfloat& getS(int x, int y, int z) {
+        return S[getIndex(x, y, z)];
+    }
+
+    int& getW(int x, int y, int z) {
+        return W[getIndex(x, y, z)];
+    }
+
 private:
     int K;  // dimension of the grid
+
+    GLbyte *C;
+    GLfloat *S;
+    int *W;
+
+    int getIndex(int x, int y, int z) {
+        return K * K * x + K * y + z;
+    }
 };
 
 #endif
