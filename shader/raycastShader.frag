@@ -8,12 +8,20 @@ layout (std430, binding = 1) buffer gridSBuf {
     float S[];
 };
 
-layout (std430, binding = 2) buffer IMBuf {
+layout (std430, binding = 2) buffer gridWBuf {
+    float W[];
+};
+
+layout (std430, binding = 3) buffer IMBuf {
     uint IM[];
 };
 
-layout (std430, binding = 3) buffer DMBuf {
+layout (std430, binding = 4) buffer DMBuf {
     float DM[];
+};
+
+layout (std430, binding = 5) buffer WMBuf {
+    float WM[];
 };
 
 uniform mat3 intrinsic_matrix_inv;
@@ -54,6 +62,7 @@ void main() {
 
     uvec3 old_C = uvec3(0, 0, 0), new_C;
     float old_S = 0.0, new_S;
+    float old_W = 0.0, new_W;
     vec3 old_real_p = vec3(0.0, 0.0, 0.0), new_real_p;
     bool flag = false;
     for (int i = beg; i >= 0 && i < K; i += step) {
@@ -69,9 +78,11 @@ void main() {
         }
         new_C = unpackPixel(C[voxelIndex]);
         new_S = S[voxelIndex];
+        new_W = W[voxelIndex];
         if (new_S <= 0) {
             if (new_S == 0 || !flag) {
                 IM[index] = packPixel(new_C);
+                WM[index] = new_W;
             }
             else {
                 float tmp_newS = -1 / new_S, tmp_oldS = 1 / old_S;
@@ -79,23 +90,29 @@ void main() {
                 float para_new = tmp_newS / tmp_sumS;
                 float para_old = tmp_oldS / tmp_sumS;
                 IM[index] = packPixel(uvec3(para_new * new_C + para_old * old_C));
+                WM[index] = para_new * new_W + para_old * old_W;
                 new_real_p = para_new * new_real_p + para_old * old_real_p;
+            }
+            if (WM[index] <= 0) {
+                WM[index] = 1;
             }
             vec3 new_real_p = new_real_p - vec3(K / 2, K / 2, 0);
             vec3 camera_p = R_Camera * new_real_p  + T_Camera;
             DM[index] = camera_p.z;
-            color = vec3(0,1,1);
+            color = vec3(1,1,1);
             return;
         }
         else {
             old_C = new_C;
             old_S = new_S;
+            old_W = new_W;
             old_real_p = new_real_p;
             flag = true;
         }
     }
     IM[index] = packPixel(uvec3(0,0,0));
-    DM[index] = 2000;
+    DM[index] = 1e8;
+    WM[index] = 0;
     color = vec3(0.2, 0.3, 0.3);
 }
 

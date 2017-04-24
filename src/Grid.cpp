@@ -3,7 +3,7 @@
 Grid::Grid(int K):K(K) {
     C = new GLbyte[K * K * K * 4]{0};
     S = new GLfloat[K * K * K]{INFINITY};
-    W = new int[K * K * K]{0};
+    W = new GLfloat[K * K * K]{0};
 
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
@@ -47,12 +47,14 @@ void Grid::getImageAndDepthFromViewPoint(
         cv::Mat intrinsic_matrix, // camera's intrinsic parameters
         // output
         cv::Mat &IM, // RGBA image, data in uchar
-        cv::Mat &DM  // depth map, data in GLfloat
+        cv::Mat &DM,  // depth map, data in GLfloat
+        cv::Mat &WM
 ) {
     static Shader shader("../shader/vShader.vs", "../shader/raycastShader.frag");
 
     IM = cv::Mat(IMG_SIZE, CV_8UC4, cv::Scalar::all(0));
     DM = cv::Mat(IMG_SIZE, CV_32FC1, cv::Scalar::all(0));
+    WM = cv::Mat(IMG_SIZE, CV_32FC1, cv::Scalar::all(0));
 
     cv::Mat intrinsic_matrix_inv = intrinsic_matrix.inv();
 
@@ -63,11 +65,13 @@ void Grid::getImageAndDepthFromViewPoint(
     shader.use();
 
     // put Grid_C, Grid_S, intrinsic_matrix_inv, cameraPoseT, camereaPoseR into buffer
-    GLuint CBuf, SBuf, IMBuf, DMBuf;
+    GLuint CBuf, SBuf, WBuf, IMBuf, DMBuf, WMBuf;
     const GLuint CBuf_index = 0;
     const GLuint SBuf_index = 1;
-    const GLuint IMBuf_index = 2;
-    const GLuint DMBuf_index = 3;
+    const GLuint WBuf_index = 2;
+    const GLuint IMBuf_index = 3;
+    const GLuint DMBuf_index = 4;
+    const GLuint WMBuf_index = 5;
     // copy Grid_C
     glGenBuffers(1, &CBuf);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, CBuf);
@@ -78,6 +82,11 @@ void Grid::getImageAndDepthFromViewPoint(
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, SBuf);
     glBufferData(GL_SHADER_STORAGE_BUFFER, K * K * K * sizeof(GLfloat), (void*)S, GL_STATIC_READ);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, SBuf_index, SBuf);
+    // copy Grid_W
+    glGenBuffers(1, &WBuf);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, WBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, K * K * K * sizeof(GLfloat), (void*)W, GL_STATIC_READ);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, WBuf_index, WBuf);
     // allocate space for IM
     glGenBuffers(1, &IMBuf);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, IMBuf);
@@ -88,6 +97,11 @@ void Grid::getImageAndDepthFromViewPoint(
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, DMBuf);
     glBufferData(GL_SHADER_STORAGE_BUFFER, FRAME_WIDTH * FRAME_HEIGHT * sizeof(GLfloat), nullptr, GL_DYNAMIC_COPY);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, DMBuf_index, DMBuf);
+    // allocate space for WM
+    glGenBuffers(1, &WMBuf);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, WMBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, FRAME_WIDTH * FRAME_HEIGHT * sizeof(GLfloat), nullptr, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, WMBuf_index, WMBuf);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     // pass other three matrix into GPU memory
     // convert data of matrices to float
@@ -112,10 +126,14 @@ void Grid::getImageAndDepthFromViewPoint(
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, FRAME_WIDTH * FRAME_HEIGHT * sizeof(GLuint), (void*)IM.data);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, DMBuf);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, FRAME_WIDTH * FRAME_HEIGHT * sizeof(GLfloat), (void*)DM.data);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, WMBuf);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, FRAME_WIDTH * FRAME_HEIGHT * sizeof(GLfloat), (void*)WM.data);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     glDeleteBuffers(1, &CBuf);
     glDeleteBuffers(1, &SBuf);
+    glDeleteBuffers(1, &WBuf);
     glDeleteBuffers(1, &IMBuf);
     glDeleteBuffers(1, &DMBuf);
+    glDeleteBuffers(1, &WMBuf);
 }

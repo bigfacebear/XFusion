@@ -7,13 +7,6 @@
 GLFWwindow *glWindow = nullptr;
 GLuint DRAW_VAO;
 
-XFuser::XFuser(): grid(256), framePool(40) {
-    if (!initOpenGLContext()) {
-        std::cout << "Failed to initialize OpenGL context. " << std::endl;
-        exit(1);
-    }
-}
-
 XFuser::XFuser(cv::Mat intrinsic_matrix): grid(256), framePool(40), intrinsic_matrix(intrinsic_matrix) {
     if (!initOpenGLContext()) {
         std::cout << "Failed to initialize OpenGL context. " << std::endl;
@@ -62,18 +55,49 @@ void XFuser::bootstrap(FramePool & framePool, Grid & grid, IOProcessor & ioProce
 }
 
 PoseMatx XFuser::poseEstimate(cv::Mat &Ii, PoseMatx &Tv, Grid &grid, cv::Mat intrinsic_matrix) {
-//    cv::Mat IM(Ii.size(), CV_8UC3, cv::Scalar::all(0));
-//    cv::Mat DM(Ii.size(), CV_64FC1, cv::Scalar::all(0));
-//    raycastingFromTv(Tv, grid, Ii.size(), intrinsic_matrix, IM, DM);
-//    cv::imshow("IM", IM);
-//    cv::Mat DM_show(Ii.size(), CV_8UC1, cv::Scalar::all(0));
-//    cv::imshow("DM", DM_show);
-//    /*for (int v = 0; v < IM.rows; v++) {
-//        for (int u = 0; u < IM.cols; u++) {
-//
-//        }
-//    }*/
-//    return PoseMatx();
+    cv::Mat IM(IMG_SIZE, CV_8UC4, cv::Scalar::all(0));
+    cv::Mat DM(IMG_SIZE, CV_32FC1, cv::Scalar::all(0));
+    cv::Mat WM(IMG_SIZE, CV_32FC1, cv::Scalar::all(0));
+    grid.getImageAndDepthFromViewPoint(Tv, intrinsic_matrix, IM, DM, WM);
+
+    ceres::Grid2D<uchar, 4> array(Ii.data, 0, Ii.rows, 0, Ii.cols);
+    ceres::BiCubicInterpolator<ceres::Grid2D<uchar, 4>> interpolator(array);
+
+    double trans[3];
+    double angleAxis[3];
+
+    cv::Mat intrinsic_matrix_inv = intrinsic_matrix.inv();
+
+    ceres::Problem problem;
+    for (int u = 0; u < FRAME_WIDTH; u++) {
+        for (int v = 0; v < FRAME_HEIGHT; v++) {
+            float w = WM.at<float>(v, u);
+            if (w == 0) {
+                continue;
+            }
+            float d = DM.at<float>(v, u);
+            cv::Mat C = cv::Mat(IM.at<cv::Vec4b>(v, u));
+            cv::Mat P = cv::Mat(cv::Vec3f(u, v, 1));
+            P = d * intrinsic_matrix_inv * P;
+            ceres::CostFunction *costFunction =
+                    PoseEstimateFunctor::Create(interpolator, (float*)intrinsic_matrix.data, (float*)P.data, C.data);
+            ceres::ScaledLoss lossFunction(NULL, (double)w, ceres::DO_NOT_TAKE_OWNERSHIP);
+            problem.AddResidualBlock(costFunction, &lossFunction, trans, angleAxis);
+        }
+    }
+
+    cv::Mat ret = cv::Mat::eye(4, 4, CV_64FC1);
+    cv::Mat RotateMatrix(9, 9, CV_64FC1);
+    ceres::AngleAxisToRotationMatrix<double>(angleAxis, (double*)RotateMatrix.data);
+    memcpy(ret.data, RotateMatrix.data, 3 * sizeof(double));
+    memcpy(ret.data + ret.step[0], RotateMatrix.data + RotateMatrix.step[0], 3 * sizeof(double));
+    memcpy(ret.data + 2 * ret.step[0], RotateMatrix.data + 2 * RotateMatrix.step[0], 3 * sizeof(double));
+    ret.at<double>(0, 3) = trans[0];
+    ret.at<double>(1, 3) = trans[1];
+    ret.at<double>(2, 3) = trans[2];
+    ret.convertTo(ret, CV_32FC1);
+
+    return ret;
 }
 
 cv::Mat XFuser::depthEstimate(const Frame & Ii, const Frame & Ik) {

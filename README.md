@@ -6,8 +6,8 @@
 
 ## Camera Pose Estimate
 
-* [x] raycasting
-* [ ] Gauss-Newton
+* [x] Ray-casting
+* [x] Gauss-Newton **untested**
 
 ## Depth Estimate
 
@@ -16,8 +16,9 @@
 
 ## Fuse Depth Image
 
-- [x] Fuse  **untested**
+- [ ] Fuse  **untested**
 
 ## * GPU Accelerate
 
-- [ ] Accelerate
+- [x] Ray-casting
+- [ ] Stereo match

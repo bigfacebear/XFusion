@@ -66,7 +66,8 @@ int main(int argc, char **argv) {
         Tv = Tvl * Tv;
         cv::Mat IM(Ii.size(), CV_8UC3, cv::Scalar::all(0));
         cv::Mat DM(Ii.size(), CV_32FC1, cv::Scalar::all(0));
-        grid.getImageAndDepthFromViewPoint(Tv, intrinsic_matrix_loaded, IM, DM);
+        cv::Mat WM(Ii.size(), CV_32FC1, cv::Scalar::all(0));
+        grid.getImageAndDepthFromViewPoint(Tv, intrinsic_matrix_loaded, IM, DM, WM);
 
         cv::imshow("IM", IM);
         cv::Mat DM_show = showDM(DM);
